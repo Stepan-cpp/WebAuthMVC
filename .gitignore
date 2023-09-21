@@ -1,0 +1,6 @@
+﻿/WebAuthMVC/bin/
+/WebAuthMVC/obj/
+/.idea/
+/WebAuthMVC/users.db
+/WebAuthMVC/users.db-shm
+/WebAuthMVC/users.db-wal
