@@ -1,0 +1,15 @@
+﻿@model WebAuthMVC.Models.Users.User?
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    @if (Model != null)
+    {
+        <h1>Welcome home, @Model.FirstName</h1>
+    }
+    else
+    {
+        <h1>You're not authenticated</h1>
+    }
+</div>

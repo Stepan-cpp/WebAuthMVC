@@ -1,0 +1,27 @@
+﻿@model LoginModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div>
+    <form method="post" asp-controller="Home" asp-action="Login">
+        <p>
+            <label asp-for="Username"></label><br />
+            <input asp-for="Username" /><br />
+            <span style="color: red" asp-validation-for="Username"></span>
+        </p>
+        <p>
+            <label asp-for="Password"></label><br />
+            <input asp-for="Password" type="password" /><br />
+            <span style="color: red" asp-validation-for="Password"></span>
+        </p>
+        <input type='submit' value='Login' />
+    </form>
+    <span>@Model.Message</span>
+    <a href="~/Home/Register">Has no account? Register.</a>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial"/>
+}

@@ -1,0 +1,37 @@
+﻿@using WebAuthMVC.Models.Users
+@model RegisterModel
+@{
+    ViewData["Title"] = "Register";
+}
+
+<div>
+    <form method="post" asp-controller="Home" asp-action="Register">
+        <div asp-validation-summary="All"></div>
+        <p>
+            <label asp-for="FirstName"></label><br/>
+            <input asp-for="FirstName"/><br/>
+            <span style="color: red" asp-validation-for="FirstName"></span>
+        </p>
+        <p>
+            <label asp-for="LastName"></label><br/>
+            <input asp-for="LastName"/><br/>
+            <span style="color: red" asp-validation-for="LastName"></span>
+        </p>
+        <p>
+            <label asp-for="Username"></label><br/>
+            <input asp-for="Username"/><br/>
+            <span style="color: red" asp-validation-for="Username"></span>
+        </p>
+        <p>
+            <label asp-for="Password"></label><br/>
+            <input asp-for="Password" type="password"/><br/>
+            <span style="color: red" asp-validation-for="Password"></span>
+        </p>
+        <input type='submit' value='Create an account'/>
+    </form>
+    <span>@Model.Message</span>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial"/>
+}
