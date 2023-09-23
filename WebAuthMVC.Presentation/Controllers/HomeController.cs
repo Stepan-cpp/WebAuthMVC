@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebAuth;
 using WebAuth.HashProviders;
+using WebAuthMVC.Core.Impl;
 using WebAuthMVC.Infrastructure.Entities;
 using WebAuthMVC.Models;
 
@@ -14,7 +16,7 @@ namespace WebAuthMVC.Controllers;
 
 public class HomeController : Controller
 {
-   private IPasswordEncryptionService encryptor;
+   private IPasswordEncryptionService Encryptor { get; }
 
    public User? CurrentUser
    {
@@ -24,7 +26,7 @@ public class HomeController : Controller
 
    public HomeController(IPasswordEncryptionService encryptor)
    {
-      this.encryptor = encryptor;
+      Encryptor = encryptor;
    }
 
    [Authorize]
@@ -37,18 +39,34 @@ public class HomeController : Controller
    }
 
    [HttpPost]
-   public async Task<IActionResult> ChangePassword(DbApplicationContext db, PasswordChangeModel pwChange)
+   public async Task<IActionResult> ChangePassword(DbApplicationContext db, PasswordChangeModel passwordModel)
    {
       if (!await CheckAuth(db))
          return Unauthorized();
 
       if (!ModelState.IsValid)
-         return View("Account", pwChange);
+         return View("Account", passwordModel);
 
-      CurrentUser!.PasswordHash = encryptor.GetHash(pwChange.NewPassword);
+      CurrentUser!.PasswordHash = Encryptor.GetHash(passwordModel.NewPassword);
       db.Users.Update(CurrentUser!);
       await db.SaveChangesAsync();
+      
       return Redirect("~/");
+   }
+
+   private async void LogOut()
+   {
+      await HttpContext.SignOutAsync();
+      CurrentUser = null;
+   }
+
+   private async Task<User?> TryGetUserAsync(IUserCredentials credentials, DbApplicationContext db)
+   {
+      var user = await db.Users.FindAsync(credentials.Username);
+      if (user is null || !user.VerifyHash(credentials.PasswordHash, Encryptor))
+         return null;
+
+      return user;
    }
 
    private async Task<bool> CheckAuth(DbApplicationContext db)
@@ -56,37 +74,24 @@ public class HomeController : Controller
       if (User.Identity is {IsAuthenticated: false})
          return false;
 
-      User? user;
       try
       {
          var username = User.Identity.Name;
          var passHash = User.Claims.First().Properties["Password"];
-
-         user = await db.Users.FindAsync(username);
-         if (user == null)
+         User? user;
+         if ((user = await TryGetUserAsync(IUserCredentials.FromHash(username, passHash), db)) is not null)
          {
-            await HttpContext.SignOutAsync();
-            CurrentUser = null;
-            return false;
-         }
-
-         if (!user.VerifyHash(passHash, encryptor))
-         {
-            await HttpContext.SignOutAsync();
-            CurrentUser = null;
-            return false;
+            CurrentUser = user;
+            return true;
          }
       }
       catch
       {
-         await HttpContext.SignOutAsync();
-         CurrentUser = null;
-         return false;
+         // ignored
       }
-      
-      CurrentUser = user;
 
-      return true;
+      LogOut();
+      return false;
    }
    
    public async Task<IActionResult> Index(DbApplicationContext db)
@@ -121,29 +126,25 @@ public class HomeController : Controller
 
       return Json(true);
    }
+
+   private ClaimsPrincipal CreateClaims(IUserCredentials credentials)
+   {
+      var claims = new List<Claim> { new (ClaimTypes.Name, credentials.Username) };
+      claims[0].Properties["Password"] = credentials.PasswordHash;
+      return new ClaimsPrincipal(new ClaimsIdentity(claims, "Cookies"));
+   }
    
    [HttpPost]
    public async Task<IActionResult> Login(string? returnUrl, LoginModel model, DbApplicationContext db)
    {
-      User user = db.Users.Find(model.Username);
+      User? user = await TryGetUserAsync(IUserCredentials.FromPassword(model.Username, model.Password, Encryptor), db);
       if (user is null)
       {
-         model.Message = "Invalid username";
+         model.Message = "Invalid credentials";
          return View(model);
       }
 
-      if (!user.VerifyPassword(model.Password, encryptor))
-      {
-         model.Message = "Invalid password";
-         return View(model);
-      }
-      
-      var claims = new List<Claim> { new (ClaimTypes.Name, user.Username) };
-      claims[0].Properties["Password"] = user.PasswordHash;
-      
-      ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims, "Cookies");
-
-      await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+      await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, CreateClaims(IUserCredentials.FromUser(user)));
       return Redirect(returnUrl ?? "/");
    }
 
@@ -167,7 +168,7 @@ public class HomeController : Controller
          Username = model.Username,
          FirstName = model.FirstName,
          LastName = model.LastName ?? "",
-         PasswordHash = AbstractUser.HashPassword(model.Password, encryptor)
+         PasswordHash = AbstractUser.HashPassword(model.Password, Encryptor)
       });
       await db.SaveChangesAsync();
 
