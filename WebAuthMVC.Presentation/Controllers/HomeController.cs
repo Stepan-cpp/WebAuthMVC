@@ -70,7 +70,7 @@ public class HomeController : Controller
             return false;
          }
 
-         if (user.VerifyHash(passHash, encryptor))
+         if (!user.VerifyHash(passHash, encryptor))
          {
             await HttpContext.SignOutAsync();
             CurrentUser = null;

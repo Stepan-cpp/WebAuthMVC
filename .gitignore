@@ -1,6 +1,6 @@
-﻿/WebAuthMVC/bin/
-/WebAuthMVC/obj/
-/.idea/
+﻿**/bin/
+**/obj/
+**/.idea/
 *.db
 *.db-wal
-*.db-shm
+*.db-shmgit
