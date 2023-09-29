@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="AutoMapper" Version="7.0.1" />
         <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="7.0.1" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.11" />
@@ -89,8 +90,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\WebAuthMVC.Core\WebAuthMVC.Core.csproj" />
-      <ProjectReference Include="..\WebAuthMVC.Infrastructure\WebAuthMVC.Infrastructure.csproj" />
+      <ProjectReference Include="..\WebAuthMVC.BLL\WebAuthMVC.BLL.csproj" />
     </ItemGroup>
 
 </Project>

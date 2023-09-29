@@ -1,5 +1,4 @@
-﻿@using WebAuthMVC.Infrastructure.Entities
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta name="viewport" content="width=device-width" />
@@ -9,10 +8,10 @@
 <body>
 <h2>@ViewBag.Title</h2>
 @{
-    User? user = null;
+    UserModel? user = null;
     if (ViewBag.CurrentUser != null)
     {
-        user = (User) ViewBag.CurrentUser;
+        user = (UserModel) ViewBag.CurrentUser;
     }
 }
 @if (user != null)

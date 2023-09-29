@@ -1,6 +1,8 @@
-﻿namespace WebAuth.HashProviders;
+﻿using WebAuthMVC.BLL.Abstractions;
 
-public class BcryptPasswordEncryptionService : IPasswordEncryptionService
+namespace WebAuthMVC.BLL.Services;
+
+public class BcryptUserVerificationService : IUserVerificationService
 {
    public string GetHash(string password)
    {

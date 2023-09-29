@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace WebAuthMVC.Models;
 
-public class PasswordChangeModel
+public class PasswordChangeViewModel
 {
    [StringLength(64, MinimumLength = 8)]
    [Required]

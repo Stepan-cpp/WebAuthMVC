@@ -1,14 +1,13 @@
 ﻿using System.Diagnostics;
-using System.Net;
-using System.Runtime.CompilerServices;
+using System.Net.Mime;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using WebAuth;
-using WebAuth.HashProviders;
-using WebAuthMVC.Core.Impl;
+using Microsoft.EntityFrameworkCore;
+using WebAuthMVC.BLL.Abstractions;
+using WebAuthMVC.BLL.BusinessModels;
 using WebAuthMVC.Infrastructure.Entities;
 using WebAuthMVC.Models;
 
@@ -16,40 +15,39 @@ namespace WebAuthMVC.Controllers;
 
 public class HomeController : Controller
 {
-   private IPasswordEncryptionService Encryptor { get; }
+   private IRegistrationService Db { get; }
 
-   public User? CurrentUser
+   public UserModel? CurrentUser
    {
-      get => (User?) ViewData[nameof(CurrentUser)];
+      get => (UserModel?) ViewData[nameof(CurrentUser)];
       set => ViewData[nameof(CurrentUser)] = value;
    }
 
-   public HomeController(IPasswordEncryptionService encryptor)
+   public HomeController(IRegistrationService db)
    {
-      Encryptor = encryptor;
+      Db = db;
    }
 
    [Authorize]
-   public async Task<IActionResult> Account(DbApplicationContext db)
+   public async Task<IActionResult> Account()
    {
-      if (!await CheckAuth(db))
+      if (!await CheckAuth())
          return Unauthorized();
 
       return View();
    }
 
    [HttpPost]
-   public async Task<IActionResult> ChangePassword(DbApplicationContext db, PasswordChangeModel passwordModel)
+   public async Task<IActionResult> ChangePassword(PasswordChangeViewModel passwordViewModel)
    {
-      if (!await CheckAuth(db))
+      if (!await CheckAuth())
          return Unauthorized();
 
       if (!ModelState.IsValid)
-         return View("Account", passwordModel);
+         return View("Account", passwordViewModel);
 
-      CurrentUser!.PasswordHash = Encryptor.GetHash(passwordModel.NewPassword);
-      db.Users.Update(CurrentUser!);
-      await db.SaveChangesAsync();
+      IUserCredentials credentials = IUserCredentials.FromHash(CurrentUser.Username, CurrentUser.PasswordHash);
+      Db.ChangeUserPassword(credentials, passwordViewModel.NewPassword);
       
       return Redirect("~/");
    }
@@ -60,16 +58,7 @@ public class HomeController : Controller
       CurrentUser = null;
    }
 
-   private async Task<User?> TryGetUserAsync(IUserCredentials credentials, DbApplicationContext db)
-   {
-      var user = await db.Users.FindAsync(credentials.Username);
-      if (user is null || !user.VerifyHash(credentials.PasswordHash, Encryptor))
-         return null;
-
-      return user;
-   }
-
-   private async Task<bool> CheckAuth(DbApplicationContext db)
+   private async Task<bool> CheckAuth()
    {
       if (User.Identity is {IsAuthenticated: false})
          return false;
@@ -78,10 +67,16 @@ public class HomeController : Controller
       {
          var username = User.Identity.Name;
          var passHash = User.Claims.First().Properties["Password"];
-         User? user;
-         if ((user = await TryGetUserAsync(IUserCredentials.FromHash(username, passHash), db)) is not null)
+         IUserCredentials creds = IUserCredentials.FromHash(username, passHash);
+         if (Db.Login(creds) is {} user)
          {
-            CurrentUser = user;
+            CurrentUser = new UserModel {
+               Username = user.Username, 
+               FirstName = user.FirstName, 
+               IsAdmin = user.IsAdmin, 
+               LastName = user.LastName, 
+               PasswordHash = user.PasswordHash
+            };
             return true;
          }
       }
@@ -94,9 +89,9 @@ public class HomeController : Controller
       return false;
    }
    
-   public async Task<IActionResult> Index(DbApplicationContext db)
+   public async Task<IActionResult> Index()
    {
-      if (await CheckAuth(db))
+      if (await CheckAuth())
       {
          return View(CurrentUser);
       }
@@ -106,7 +101,7 @@ public class HomeController : Controller
    [HttpGet]
    public IActionResult Login()
    {
-      return View(new LoginModel());
+      return View(new LoginViewModel());
    }
 
    [HttpGet]
@@ -117,9 +112,9 @@ public class HomeController : Controller
    }
    
    [AcceptVerbs("GET", "POST")]
-   public IActionResult VerifyUsername(string username, DbApplicationContext db)
+   public IActionResult VerifyUsername(string username)
    {
-      if (db.Users.Find(username) is not null)
+      if (Db.IsUsernameInUse(username))
       {
          return Json($"Username {username} is already in use.");
       }
@@ -135,44 +130,44 @@ public class HomeController : Controller
    }
    
    [HttpPost]
-   public async Task<IActionResult> Login(string? returnUrl, LoginModel model, DbApplicationContext db)
+   public async Task<IActionResult> Login(string? returnUrl, LoginViewModel viewModel)
    {
-      User? user = await TryGetUserAsync(IUserCredentials.FromPassword(model.Username, model.Password, Encryptor), db);
+      var user = Db.Login(new LoginModelDTO {Username = viewModel.Username, Password = viewModel.Password});
       if (user is null)
       {
-         model.Message = "Invalid credentials";
-         return View(model);
+         viewModel.Message = "Invalid credentials";
+         return View("Login", viewModel);
       }
 
-      await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, CreateClaims(IUserCredentials.FromUser(user)));
+      await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, 
+         CreateClaims(IUserCredentials.FromHash(user.Username, user.PasswordHash)));
       return Redirect(returnUrl ?? "/");
    }
 
    [HttpGet]
    public IActionResult Register()
    {
-      return View(new RegisterModel());
+      return View(new RegisterViewModel());
    }
    
    [HttpPost]
-   public async Task<IActionResult> Register(RegisterModel model, DbApplicationContext db)
+   public async Task<IActionResult> Register(RegisterViewModel viewModel)
    {
       if (!ModelState.IsValid)
       {
-         model.Message = ModelState.Values.First().Errors.First().ErrorMessage;
-         return View(model);
+         viewModel.Message = ModelState.Values.First().Errors.First().ErrorMessage;
+         return View(viewModel);
       }
 
-      db.Users.Add(new User
+      Db.RegisterUser(new RegisterModelDTO
       {
-         Username = model.Username,
-         FirstName = model.FirstName,
-         LastName = model.LastName ?? "",
-         PasswordHash = AbstractUser.HashPassword(model.Password, Encryptor)
+         Username = viewModel.Username,
+         FirstName = viewModel.FirstName,
+         LastName = viewModel.LastName ?? "",
+         Password = viewModel.Password
       });
-      await db.SaveChangesAsync();
 
-      return await Login(null, model, db);
+      return await Login(null, new LoginViewModel { Username = viewModel.Username, Password = viewModel.Password});
    }
    
    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

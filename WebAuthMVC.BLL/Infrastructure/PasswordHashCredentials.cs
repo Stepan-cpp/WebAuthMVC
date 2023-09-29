@@ -1,6 +1,6 @@
-using WebAuth;
+using WebAuthMVC.BLL.Abstractions;
 
-namespace WebAuthMVC.Core.Impl;
+namespace WebAuthMVC.BLL.Infrastructure;
 
 public class PasswordHashCredentials : IUserCredentials
 {

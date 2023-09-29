@@ -1,13 +1,13 @@
-using WebAuthMVC.Core.Impl;
+using WebAuthMVC.BLL.Infrastructure;
 
-namespace WebAuth;
+namespace WebAuthMVC.BLL.Abstractions;
 
 public interface IUserCredentials
 {
    public string Username { get; set;  }
    public string PasswordHash { get; }
 
-   public static IUserCredentials FromPassword(string username, string password, IPasswordEncryptionService encryptionService)
+   public static IUserCredentials FromPassword(string username, string password, IUserVerificationService encryptionService)
    {
       return new PasswordCredentials(username, password, encryptionService);
    }
@@ -15,10 +15,5 @@ public interface IUserCredentials
    public static IUserCredentials FromHash(string username, string hash)
    {
       return new PasswordHashCredentials(username, hash);
-   }
-
-   public static IUserCredentials FromUser(AbstractUser user)
-   {
-      return new PasswordHashCredentials(user.Username, user.PasswordHash);
    }
 }

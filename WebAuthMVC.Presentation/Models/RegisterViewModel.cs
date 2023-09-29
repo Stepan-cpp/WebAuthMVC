@@ -4,19 +4,19 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace WebAuthMVC.Models;
 
-public class RegisterModel : LoginModel
+public class RegisterViewModel
 {
    
    [BindRequired]
    [StringLength(32, MinimumLength = 1)]
    [Required]
    [Remote(action: "VerifyUsername", controller: "Home")]
-   public override string Username { get; set; }
+   public string Username { get; set; }
    
    [BindRequired]
    [StringLength(64, MinimumLength = 8)]
    [Required]
-   public override string Password { get; set; }
+   public string Password { get; set; }
    
    [BindRequired]
    [StringLength(32, MinimumLength = 1)]
@@ -24,4 +24,6 @@ public class RegisterModel : LoginModel
    public string FirstName { get; set; }
    
    public string? LastName { get; set; }
+   
+   public string? Message { get; set; }
 }
