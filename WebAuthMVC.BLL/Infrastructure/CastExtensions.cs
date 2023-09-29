@@ -5,7 +5,7 @@ namespace WebAuthMVC.BLL.Infrastructure;
 
 public static class CastExtensions
 {
-   public static User ToDalUser(this UserDTO user)
+   public static User ToDalUser(this UserDto user)
    {
       return new User
       {
@@ -17,9 +17,9 @@ public static class CastExtensions
       };
    }
    
-   public static UserDTO ToDtoUser(this User user)
+   public static UserDto ToDtoUser(this User user)
    {
-      return new UserDTO
+      return new UserDto
       {
          Username = user.Username, 
          FirstName = user.FirstName, 
@@ -29,13 +29,13 @@ public static class CastExtensions
       };
    }
    
-   public static User ToDalUser(this RegisterModelDTO user)
+   public static User ToDalUser(this RegisterModelDto user)
    {
       return new User
       {
          Username = user.Username, 
-         FirstName = user.FirstName, 
-         LastName = user.LastName,
+         FirstName = user.FirstName ?? "", 
+         LastName = user.LastName ?? "",
          IsAdmin = false,
       };
    }

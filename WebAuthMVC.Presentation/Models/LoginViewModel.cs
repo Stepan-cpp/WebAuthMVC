@@ -9,11 +9,11 @@ public class LoginViewModel
    [BindRequired]
    [StringLength(32, MinimumLength = 1)]
    [Required]
-   public string Username { get; set; }
+   public string Username { get; set; } = "";
    
    [BindRequired]
    [Required]
-   public string Password { get; set; }
+   public string Password { get; set; } = "";
    
    public string? Message { get; set; }
 }

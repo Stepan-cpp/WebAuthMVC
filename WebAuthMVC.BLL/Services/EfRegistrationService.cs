@@ -25,7 +25,7 @@ public class EfRegistrationService : IRegistrationService
       Database.Dispose();
    }
 
-   public UserDTO? Login(LoginModelDTO creds)
+   public UserDto? Login(LoginModelDto creds)
    {
       User? user = Database.Users.Get(creds.Username);
       if (user is null)
@@ -37,7 +37,7 @@ public class EfRegistrationService : IRegistrationService
       return user.ToDtoUser();
    }
    
-   public UserDTO? Login(IUserCredentials creds)
+   public UserDto? Login(IUserCredentials creds)
    {
       User? user = Database.Users.Get(creds.Username);
       if (user is null)
@@ -49,15 +49,15 @@ public class EfRegistrationService : IRegistrationService
       return user.ToDtoUser();
    }
 
-   public void RegisterUser(RegisterModelDTO user)
+   public void RegisterUser(RegisterModelDto user)
    {
       if (Database.Users.Get(user.Username) is not null)
-         throw new ValidationException("This username is already taken", nameof(UserDTO.Username));
+         throw new ValidationException("This username is already taken", nameof(UserDto.Username));
       
       var results = new List<ValidationResult>();
       Validator.TryValidateObject(user, new ValidationContext(user), results);
       if (results.Count > 0)
-         throw new ValidationException(results[0].ErrorMessage, results[0].MemberNames.First());
+         throw new ValidationException(results[0].ErrorMessage ?? "", results[0].MemberNames.First());
 
       var dalUser = user.ToDalUser();
       dalUser.PasswordHash = VerificationService.GetHash(user.Password);
@@ -67,7 +67,7 @@ public class EfRegistrationService : IRegistrationService
 
    public void DeleteUser(IUserCredentials credentials)
    {
-      if (Login(credentials) is not UserDTO user)
+      if (Login(credentials) is not UserDto user)
          throw new ValidationException("Invalid user credentials", "");
       
       Database.Users.Delete(new User { Username = user.Username});
@@ -76,10 +76,10 @@ public class EfRegistrationService : IRegistrationService
 
    public void ChangeUserPassword(IUserCredentials cred, string newPassword)
    {
-      if (Login(cred) is not UserDTO user)
+      if (Login(cred) is not UserDto user)
          throw new ValidationException("Invalid user credentials", "");
 
-      Database.Users.Get(user.Username).PasswordHash = VerificationService.GetHash(newPassword);
+      Database.Users.Get(user.Username)!.PasswordHash = VerificationService.GetHash(newPassword);
       Database.Save();
    }
 

@@ -1,18 +1,12 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Rewrite;
-using WebAuthMVC.BLL.Abstractions;
-using WebAuthMVC.BLL.Services;
-using WebAuthMVC.DAL.Abstractions;
-using WebAuthMVC.DAL.Contexts;
-using WebAuthMVC.DAL.Repositories;
+using WebAuthMVC.BLL.Configurations;
+using WebAuthMVC.Infrastructure.Configurations;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<IUserVerificationService, BcryptUserVerificationService>();
-builder.Services.AddSingleton<ApplicationContext, ApplicationContext>();
-
-builder.Services.AddSingleton<IUnitOfWork, EfUnitOfWork>();
-builder.Services.AddSingleton<IRegistrationService, EfRegistrationService>();
+builder.Services.RegisterBllDependencies();
+builder.Services.RegisterDalDependencies();
 
 builder.Services.AddEntityFrameworkSqlite();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options => options.LoginPath="/Home/Login");

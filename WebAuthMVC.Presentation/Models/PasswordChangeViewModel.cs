@@ -9,5 +9,5 @@ public class PasswordChangeViewModel
    [StringLength(64, MinimumLength = 8)]
    [Required]
    [BindRequired]
-   public string NewPassword { get; set; }
+   public string NewPassword { get; set; } = "";
 }

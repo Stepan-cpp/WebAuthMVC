@@ -1,21 +1,18 @@
 ﻿using System.Diagnostics;
-using System.Net.Mime;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using WebAuthMVC.BLL.Abstractions;
 using WebAuthMVC.BLL.BusinessModels;
-using WebAuthMVC.Infrastructure.Entities;
 using WebAuthMVC.Models;
 
 namespace WebAuthMVC.Controllers;
 
 public class HomeController : Controller
 {
-   private IRegistrationService Db { get; }
+   private readonly IRegistrationService registrationService;
 
    public UserModel? CurrentUser
    {
@@ -23,79 +20,36 @@ public class HomeController : Controller
       set => ViewData[nameof(CurrentUser)] = value;
    }
 
-   public HomeController(IRegistrationService db)
+   public HomeController(IRegistrationService registrationService)
    {
-      Db = db;
+      this.registrationService = registrationService;
    }
 
    [Authorize]
-   public async Task<IActionResult> Account()
+   public IActionResult Account()
    {
-      if (!await CheckAuth())
-         return Unauthorized();
-
       return View();
    }
 
    [HttpPost]
-   public async Task<IActionResult> ChangePassword(PasswordChangeViewModel passwordViewModel)
+   [Authorize]
+   public IActionResult ChangePassword(PasswordChangeViewModel passwordViewModel)
    {
-      if (!await CheckAuth())
-         return Unauthorized();
-
       if (!ModelState.IsValid)
          return View("Account", passwordViewModel);
 
+      if (CurrentUser is null)
+         return View("Login", new LoginViewModel());
+      
       IUserCredentials credentials = IUserCredentials.FromHash(CurrentUser.Username, CurrentUser.PasswordHash);
-      Db.ChangeUserPassword(credentials, passwordViewModel.NewPassword);
+      registrationService.ChangeUserPassword(credentials, passwordViewModel.NewPassword);
       
       return Redirect("~/");
    }
 
-   private async void LogOut()
+   public IActionResult Index()
    {
-      await HttpContext.SignOutAsync();
-      CurrentUser = null;
-   }
-
-   private async Task<bool> CheckAuth()
-   {
-      if (User.Identity is {IsAuthenticated: false})
-         return false;
-
-      try
-      {
-         var username = User.Identity.Name;
-         var passHash = User.Claims.First().Properties["Password"];
-         IUserCredentials creds = IUserCredentials.FromHash(username, passHash);
-         if (Db.Login(creds) is {} user)
-         {
-            CurrentUser = new UserModel {
-               Username = user.Username, 
-               FirstName = user.FirstName, 
-               IsAdmin = user.IsAdmin, 
-               LastName = user.LastName, 
-               PasswordHash = user.PasswordHash
-            };
-            return true;
-         }
-      }
-      catch
-      {
-         // ignored
-      }
-
-      LogOut();
-      return false;
-   }
-   
-   public async Task<IActionResult> Index()
-   {
-      if (await CheckAuth())
-      {
-         return View(CurrentUser);
-      }
-      return View();
+      return View(CurrentUser);
    }
 
    [HttpGet]
@@ -108,13 +62,14 @@ public class HomeController : Controller
    public async Task<IActionResult> Logout()
    {
       await HttpContext.SignOutAsync();
+      CurrentUser = null;
       return RedirectPermanent("~/");
    }
    
    [AcceptVerbs("GET", "POST")]
    public IActionResult VerifyUsername(string username)
    {
-      if (Db.IsUsernameInUse(username))
+      if (registrationService.IsUsernameInUse(username))
       {
          return Json($"Username {username} is already in use.");
       }
@@ -125,14 +80,13 @@ public class HomeController : Controller
    private ClaimsPrincipal CreateClaims(IUserCredentials credentials)
    {
       var claims = new List<Claim> { new (ClaimTypes.Name, credentials.Username) };
-      claims[0].Properties["Password"] = credentials.PasswordHash;
       return new ClaimsPrincipal(new ClaimsIdentity(claims, "Cookies"));
    }
    
    [HttpPost]
    public async Task<IActionResult> Login(string? returnUrl, LoginViewModel viewModel)
    {
-      var user = Db.Login(new LoginModelDTO {Username = viewModel.Username, Password = viewModel.Password});
+      var user = registrationService.Login(new LoginModelDto {Username = viewModel.Username, Password = viewModel.Password});
       if (user is null)
       {
          viewModel.Message = "Invalid credentials";
@@ -159,7 +113,7 @@ public class HomeController : Controller
          return View(viewModel);
       }
 
-      Db.RegisterUser(new RegisterModelDTO
+      registrationService.RegisterUser(new RegisterModelDto
       {
          Username = viewModel.Username,
          FirstName = viewModel.FirstName,

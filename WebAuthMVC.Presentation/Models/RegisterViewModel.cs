@@ -11,17 +11,17 @@ public class RegisterViewModel
    [StringLength(32, MinimumLength = 1)]
    [Required]
    [Remote(action: "VerifyUsername", controller: "Home")]
-   public string Username { get; set; }
+   public string Username { get; set; } = "";
    
    [BindRequired]
    [StringLength(64, MinimumLength = 8)]
    [Required]
-   public string Password { get; set; }
+   public string Password { get; set; } = "";
    
    [BindRequired]
    [StringLength(32, MinimumLength = 1)]
    [Required]
-   public string FirstName { get; set; }
+   public string FirstName { get; set; } = "";
    
    public string? LastName { get; set; }
    
