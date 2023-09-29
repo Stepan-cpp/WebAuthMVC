@@ -3,4 +3,4 @@
 **/.idea/
 *.db
 *.db-wal
-*.db-shmgit
+*.db-shm
