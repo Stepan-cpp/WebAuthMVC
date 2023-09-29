@@ -8,6 +8,7 @@ public static class BusinessLogicConfiguration
 {
    public static void RegisterBllDependencies(this IServiceCollection services)
    {
+      services.AddSingleton<IUserVerificationService, BcryptUserVerificationService>();
       services.AddSingleton<IRegistrationService, EfRegistrationService>();
    }
 }

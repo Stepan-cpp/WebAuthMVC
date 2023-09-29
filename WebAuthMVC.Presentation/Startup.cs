@@ -5,8 +5,8 @@ using WebAuthMVC.Infrastructure.Configurations;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.RegisterBllDependencies();
 builder.Services.RegisterDalDependencies();
+builder.Services.RegisterBllDependencies();
 
 builder.Services.AddEntityFrameworkSqlite();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options => options.LoginPath="/Home/Login");

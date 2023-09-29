@@ -9,7 +9,7 @@ public static class DatabaseConfiguration
 {
    public static void RegisterDalDependencies(this IServiceCollection services)
    {
+      services.AddSingleton<ApplicationContext>();
       services.AddSingleton<IUnitOfWork, EfUnitOfWork>();
-      services.AddDbContext<ApplicationContext>();
    }
 }
